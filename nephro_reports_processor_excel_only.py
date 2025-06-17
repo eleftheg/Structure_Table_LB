@@ -2,7 +2,14 @@ import pandas as pd
 import numpy as np
 import os
 import json
+import argparse
 from datetime import datetime
+
+# Set up command line argument parsing
+parser = argparse.ArgumentParser(description='Process nephrology reports and output in CSV or Excel format')
+parser.add_argument('--format', choices=['xlsx', 'csv'], default='xlsx', 
+                   help='Output format: xlsx (default) or csv')
+args = parser.parse_args()
 
 # Load configuration
 config_path = "config.json"
@@ -19,6 +26,7 @@ except Exception as e:
     exit(1)
 
 print("Starting nephro reports processor for Excel data...")
+print(f"Output format: {args.format.upper()}")
 print("="*50)
 
 # Main Excel file path from config
@@ -94,10 +102,9 @@ print("✓ Cleaned whitespace from all cells")
 
 # Step 1: Fill missing Blutbuch-Nummer with the value from the line above
 print("\nStep 1: Filling missing Blutbuch-Nummer values...")
-if 'Blutbuch_nummer' in Uebersicht_Nierenfaelle_selected.columns:
-    # Count missing values before filling
+if 'Blutbuch_nummer' in Uebersicht_Nierenfaelle_selected.columns:    # Count missing values before filling
     missing_before = Uebersicht_Nierenfaelle_selected['Blutbuch_nummer'].isna().sum()
-      # Forward fill the Blutbuch-Nummer column
+    # Forward fill the Blutbuch-Nummer column
     Uebersicht_Nierenfaelle_selected['Blutbuch_nummer'] = Uebersicht_Nierenfaelle_selected['Blutbuch_nummer'].ffill()
     
     # Count missing values after filling
@@ -108,6 +115,39 @@ if 'Blutbuch_nummer' in Uebersicht_Nierenfaelle_selected.columns:
 else:
     print("❌ Blutbuch-Nummer column not found!")
     exit(1)
+
+# Step 1.5: Fill missing AF-Nummer (MEDAT) for identical Blutbuch-Nummer values
+print("\nStep 1.5: Filling missing AF-Nummer (MEDAT) values...")
+if 'AF_Nummer_MEDAT' in Uebersicht_Nierenfaelle_selected.columns:
+    # Count missing values before filling
+    missing_before_af = Uebersicht_Nierenfaelle_selected['AF_Nummer_MEDAT'].isna().sum()
+    
+    # Create a mapping of Blutbuch-Nummer to AF-Nummer (MEDAT) for non-null values
+    af_mapping = Uebersicht_Nierenfaelle_selected.groupby('Blutbuch_nummer')['AF_Nummer_MEDAT'].apply(
+        lambda x: x.dropna().iloc[0] if not x.dropna().empty else np.nan
+    ).to_dict()
+    
+    # Fill missing AF-Nummer values using the mapping
+    mask = Uebersicht_Nierenfaelle_selected['AF_Nummer_MEDAT'].isna()
+    Uebersicht_Nierenfaelle_selected.loc[mask, 'AF_Nummer_MEDAT'] = (
+        Uebersicht_Nierenfaelle_selected.loc[mask, 'Blutbuch_nummer'].map(af_mapping)
+    )
+    
+    # Count missing values after filling
+    missing_after_af = Uebersicht_Nierenfaelle_selected['AF_Nummer_MEDAT'].isna().sum()
+    filled_af = missing_before_af - missing_after_af
+    
+    print(f"✓ Filled missing AF-Nummer (MEDAT) values: {filled_af} values filled")
+    print(f"  Total rows: {len(Uebersicht_Nierenfaelle_selected)}, Rows with AF-Nummer: {len(Uebersicht_Nierenfaelle_selected) - missing_after_af}")
+    
+    # Show some statistics about AF-Nummer coverage per Blutbuch-Nummer
+    af_coverage = Uebersicht_Nierenfaelle_selected.groupby('Blutbuch_nummer')['AF_Nummer_MEDAT'].apply(
+        lambda x: x.notna().any()
+    ).sum()
+    total_patients = Uebersicht_Nierenfaelle_selected['Blutbuch_nummer'].nunique()
+    print(f"  Blutbuch-Nummer entries with AF-Nummer: {af_coverage}/{total_patients} ({af_coverage/total_patients*100:.1f}%)")
+else:
+    print("⚠ AF-Nummer (MEDAT) column not found, skipping AF-Nummer filling")
 
 # Step 2: Create long table format
 print("\nStep 2: Creating long table format...")
@@ -156,7 +196,13 @@ else:
 
 # Remove duplicates to create unique combinations
 print("\nStep 3: Creating unique combinations...")
-all_cols = ['Blutbuch_nummer'] + available_genetic_cols
+# Include AF-Nummer (MEDAT) in the output columns if available
+identifier_cols = ['Blutbuch_nummer']
+if 'AF_Nummer_MEDAT' in Uebersicht_Nierenfaelle_filtered.columns:
+    identifier_cols.append('AF_Nummer_MEDAT')
+    print("✓ Including AF-Nummer (MEDAT) in output")
+
+all_cols = identifier_cols + available_genetic_cols
 long_table = Uebersicht_Nierenfaelle_filtered[all_cols].drop_duplicates().reset_index(drop=True)
 
 print(f"✓ Created long table with unique combinations: {len(long_table)} rows")
@@ -252,9 +298,27 @@ print(f"  Patients with multiple combinations: {(blutbuch_counts_recode > 1).sum
 # Save the final recoded long table
 timestamp = datetime.utcnow().strftime("%Y-%m-%d_%H-%M-%S")
 filename_prefix = config["file_paths"]["output_filename_prefix"]
-output_path = f"{output_dir}/{filename_prefix}.{timestamp}.csv"
-long_table_recode.to_csv(output_path, index=False, na_rep="")
-print(f"✓ Final long table (with transformations) saved to: {output_path}")
+
+# Determine output file format and path
+output_format = args.format
+file_extension = output_format
+output_path = f"{output_dir}/{filename_prefix}.{timestamp}.{file_extension}"
+
+# Save in the requested format
+if output_format == 'xlsx':
+    try:
+        long_table_recode.to_excel(output_path, index=False, na_rep="")
+        print(f"✓ Final long table (with transformations) saved to Excel file: {output_path}")
+    except ImportError:
+        print("❌ Error: openpyxl package required for Excel output. Installing...")
+        import subprocess
+        import sys
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "openpyxl"])
+        long_table_recode.to_excel(output_path, index=False, na_rep="")
+        print(f"✓ Final long table (with transformations) saved to Excel file: {output_path}")
+else:  # csv format
+    long_table_recode.to_csv(output_path, index=False, na_rep="")
+    print(f"✓ Final long table (with transformations) saved to CSV file: {output_path}")
 
 # Show first few rows of the final transformed table
 print(f"\nFirst 10 rows of the final transformed long table:")
@@ -267,5 +331,6 @@ print(f"   - Original rows: {Uebersicht_Nierenfaelle.shape[0]}")
 print(f"   - Rows with genetic info: {len(Uebersicht_Nierenfaelle_filtered)}")
 print(f"   - Unique combinations: {len(long_table_recode)}")
 print(f"   - Unique patients: {long_table_recode['Blutbuch_nummer'].nunique()}")
+print(f"   - Output format: {output_format.upper()}")
 print(f"   - Output file: {output_path}")
 print("="*50)

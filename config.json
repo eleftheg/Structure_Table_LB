@@ -3,9 +3,9 @@
     "input_excel_file": "H:\\HGDiag\\Befunde\\Nephro\\Übersicht_Nierenfälle.xlsx",
     "output_directory": "results",
     "output_filename_prefix": "nephro_long_table_transformed"
-  },
-  "column_mapping": {
+  },  "column_mapping": {
     "Blutbuch-Nummer": "Blutbuch_nummer",
+    "AF-Nummer (MEDAT)": "AF_Nummer_MEDAT",
     "Gen": "Gen",
     "cDNA": "cDNA",
     "Protein": "Protein",

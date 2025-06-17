@@ -16,9 +16,9 @@ The script uses a `config.json` file to externalize all hardcoded values, making
     "input_excel_file": "path/to/input/file.xlsx",
     "output_directory": "results",
     "output_filename_prefix": "nephro_long_table_transformed"
-  },
-  "column_mapping": {
+  },  "column_mapping": {
     "Blutbuch-Nummer": "Blutbuch_nummer",
+    "AF-Nummer (MEDAT)": "AF_Nummer_MEDAT",
     "Gen": "Gen",
     "cDNA": "cDNA",
     "Protein": "Protein",
