@@ -172,6 +172,39 @@ if 'AF_Nummer_MEDAT' in Uebersicht_Nierenfaelle_selected.columns:
 else:
     print("⚠ AF-Nummer (MEDAT) column not found, skipping AF-Nummer filling")
 
+# Step 1.6: Fill missing Bemerkung values for identical Blutbuch-Nummer values
+print("\nStep 1.6: Filling missing Bemerkung values...")
+if 'Bemerkung' in Uebersicht_Nierenfaelle_selected.columns:
+    # Count missing values before filling
+    missing_before_bemerkung = Uebersicht_Nierenfaelle_selected['Bemerkung'].isna().sum()
+    
+    # Create a mapping of Blutbuch-Nummer to Bemerkung for non-null values
+    bemerkung_mapping = Uebersicht_Nierenfaelle_selected.groupby('Blutbuch_nummer')['Bemerkung'].apply(
+        lambda x: x.dropna().iloc[0] if not x.dropna().empty else np.nan
+    ).to_dict()
+    
+    # Fill missing Bemerkung values using the mapping
+    mask = Uebersicht_Nierenfaelle_selected['Bemerkung'].isna()
+    Uebersicht_Nierenfaelle_selected.loc[mask, 'Bemerkung'] = (
+        Uebersicht_Nierenfaelle_selected.loc[mask, 'Blutbuch_nummer'].map(bemerkung_mapping)
+    )
+    
+    # Count missing values after filling
+    missing_after_bemerkung = Uebersicht_Nierenfaelle_selected['Bemerkung'].isna().sum()
+    filled_bemerkung = missing_before_bemerkung - missing_after_bemerkung
+    
+    print(f"✓ Filled missing Bemerkung values: {filled_bemerkung} values filled")
+    print(f"  Total rows: {len(Uebersicht_Nierenfaelle_selected)}, Rows with Bemerkung: {len(Uebersicht_Nierenfaelle_selected) - missing_after_bemerkung}")
+    
+    # Show some statistics about Bemerkung coverage per Blutbuch-Nummer
+    bemerkung_coverage = Uebersicht_Nierenfaelle_selected.groupby('Blutbuch_nummer')['Bemerkung'].apply(
+        lambda x: x.notna().any()
+    ).sum()
+    total_patients = Uebersicht_Nierenfaelle_selected['Blutbuch_nummer'].nunique()
+    print(f"  Blutbuch-Nummer entries with Bemerkung: {bemerkung_coverage}/{total_patients} ({bemerkung_coverage/total_patients*100:.1f}%)")
+else:
+    print("⚠ Bemerkung column not found, skipping Bemerkung filling")
+
 # Step 2: Create long table format
 print("\nStep 2: Creating long table format...")
 
@@ -230,6 +263,12 @@ if 'Panel_oder_segregation' in Uebersicht_Nierenfaelle_filtered.columns:
     if 'Panel_oder_segregation' not in identifier_cols:
         identifier_cols.append('Panel_oder_segregation')
     print("✓ Including Panel/Segregation in output")
+
+# Ensure Bemerkung is included in the output
+if 'Bemerkung' in Uebersicht_Nierenfaelle_filtered.columns:
+    if 'Bemerkung' not in identifier_cols:
+        identifier_cols.append('Bemerkung')
+    print("✓ Including Bemerkung in output")
 
 all_cols = identifier_cols + available_genetic_cols
 long_table = Uebersicht_Nierenfaelle_filtered[all_cols].drop_duplicates().reset_index(drop=True)

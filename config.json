@@ -10,7 +10,8 @@
     "Gen": "Gen",
     "cDNA": "cDNA",
     "Protein": "Protein",
-    "Klassifizierung": "Klassifizierung"
+    "Klassifizierung": "Klassifizierung",
+    "Bemerkung": "Bemerkung"
   },
   "alternative_column_names": {
     "Gen": ["Gen...17", "Gen...16", "Gen...15"],
