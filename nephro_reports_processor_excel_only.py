@@ -324,7 +324,74 @@ print(f"  Mean combinations per patient: {blutbuch_counts_recode.mean():.2f}")
 print(f"  Max combinations per patient: {blutbuch_counts_recode.max()}")
 print(f"  Patients with multiple combinations: {(blutbuch_counts_recode > 1).sum()}")
 
-# Save the final recoded long table
+# Step 5: Handle semicolon-separated values by expanding rows
+print("\nStep 5: Expanding rows for semicolon-separated values...")
+
+def expand_semicolon_rows(df):
+    """
+    Expand rows where cells contain semicolon-separated values.
+    Creates new rows for each combination, matching values by position.
+    """
+    expanded_rows = []
+    
+    for idx, row in df.iterrows():
+        # Check which columns have semicolons
+        semicolon_cols = {}
+        max_splits = 1
+        
+        for col in df.columns:
+            cell_value = str(row[col]) if pd.notna(row[col]) else ''
+            if ';' in cell_value:
+                # Split by semicolon and strip whitespace
+                split_values = [val.strip() for val in cell_value.split(';')]
+                # Filter out empty strings
+                split_values = [val for val in split_values if val]
+                if split_values:  # Only add if there are non-empty values
+                    semicolon_cols[col] = split_values
+                    max_splits = max(max_splits, len(split_values))
+        
+        if semicolon_cols:
+            # Create new rows for each split
+            for i in range(max_splits):
+                new_row = row.copy()
+                for col in df.columns:
+                    if col in semicolon_cols:
+                        # Use the i-th value if available, otherwise use the last available value
+                        split_values = semicolon_cols[col]
+                        if i < len(split_values):
+                            new_row[col] = split_values[i]
+                        else:
+                            # If this column has fewer values, use the last one
+                            new_row[col] = split_values[-1]
+                    # For columns without semicolons, keep the original value
+                
+                expanded_rows.append(new_row)
+        else:
+            # No semicolons found, keep the row as is
+            expanded_rows.append(row)
+    
+    return pd.DataFrame(expanded_rows).reset_index(drop=True)
+
+# Apply semicolon expansion
+rows_before_expansion = len(long_table_recode)
+long_table_expanded = expand_semicolon_rows(long_table_recode)
+rows_after_expansion = len(long_table_expanded)
+
+print(f"✓ Expanded semicolon-separated values:")
+print(f"  Rows before expansion: {rows_before_expansion}")
+print(f"  Rows after expansion: {rows_after_expansion}")
+print(f"  New rows created: {rows_after_expansion - rows_before_expansion}")
+
+# Remove any duplicate rows that might have been created
+long_table_final = long_table_expanded.drop_duplicates().reset_index(drop=True)
+rows_after_dedup = len(long_table_final)
+
+if rows_after_dedup < rows_after_expansion:
+    print(f"✓ Removed {rows_after_expansion - rows_after_dedup} duplicate rows after expansion")
+
+print(f"  Final unique rows: {rows_after_dedup}")
+
+# Save the final expanded and recoded long table
 timestamp = datetime.utcnow().strftime("%Y-%m-%d_%H-%M-%S")
 filename_prefix = config["file_paths"]["output_filename_prefix"]
 
@@ -336,30 +403,31 @@ output_path = f"{output_dir}/{filename_prefix}.{timestamp}.{file_extension}"
 # Save in the requested format
 if output_format == 'xlsx':
     try:
-        long_table_recode.to_excel(output_path, index=False, na_rep="")
-        print(f"✓ Final long table (with transformations) saved to Excel file: {output_path}")
+        long_table_final.to_excel(output_path, index=False, na_rep="")
+        print(f"✓ Final long table (with transformations and expansions) saved to Excel file: {output_path}")
     except ImportError:
         print("❌ Error: openpyxl package required for Excel output. Installing...")
         import subprocess
         import sys
         subprocess.check_call([sys.executable, "-m", "pip", "install", "openpyxl"])
-        long_table_recode.to_excel(output_path, index=False, na_rep="")
-        print(f"✓ Final long table (with transformations) saved to Excel file: {output_path}")
+        long_table_final.to_excel(output_path, index=False, na_rep="")
+        print(f"✓ Final long table (with transformations and expansions) saved to Excel file: {output_path}")
 else:  # csv format
-    long_table_recode.to_csv(output_path, index=False, na_rep="")
-    print(f"✓ Final long table (with transformations) saved to CSV file: {output_path}")
+    long_table_final.to_csv(output_path, index=False, na_rep="")
+    print(f"✓ Final long table (with transformations and expansions) saved to CSV file: {output_path}")
 
 # Show first few rows of the final transformed table
-print(f"\nFirst 10 rows of the final transformed long table:")
-print(long_table_recode.head(10).to_string(index=False))
+print(f"\nFirst 10 rows of the final transformed and expanded long table:")
+print(long_table_final.head(10).to_string(index=False))
 
 print("\n" + "="*50)
 print("✅ Script completed successfully!")
 print(f"📊 Final summary:")
 print(f"   - Original rows: {Uebersicht_Nierenfaelle.shape[0]}")
 print(f"   - Rows with genetic info: {len(Uebersicht_Nierenfaelle_filtered)}")
-print(f"   - Unique combinations: {len(long_table_recode)}")
-print(f"   - Unique patients: {long_table_recode['Blutbuch_nummer'].nunique()}")
+print(f"   - Unique combinations (before expansion): {len(long_table_recode)}")
+print(f"   - Final rows (after semicolon expansion): {len(long_table_final)}")
+print(f"   - Unique patients: {long_table_final['Blutbuch_nummer'].nunique()}")
 print(f"   - Output format: {output_format.upper()}")
 print(f"   - Output file: {output_path}")
 print("="*50)
