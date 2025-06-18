@@ -18,19 +18,19 @@
   "genetic_columns": ["Gen", "cDNA", "Protein", "Klassifizierung"],
   "klassifizierung_mapping": {
     "class_2_variants": {
-      "input_values": ["Klasse II (Risiko-Poly)", "Klasse II, Risk Factor"],
+      "input_values": ["Risk factor G1 hom", "Risk factor", "funktioneller Poly", "Klasse II", "Klasse II (Risiko-Poly)", "Klasse II, Risk Factor"],
       "output_value": "Risk factor"
     },
     "class_3_variants": {
-      "input_values": ["Klasse III", "Klasse III-IV", "Klasse III (heiß)", "Klasse III (kalt)", "Klasse III funct. Poly", "Klasse IIII", "Klasse III-II", "Klasse 3"],
+      "input_values": ["Klasse III hot", "Klasse III homo", "Klasse III heterozygot", "Klasse III het", "Klasse III", "Klasse III-IV", "Klasse III (heiß)", "Klasse III (kalt)", "Klasse III funct. Poly", "Klasse IIII", "Klasse III-II", "Klasse 3"],
       "output_value": "VUS"
     },
     "class_4_variants": {
-      "input_values": ["Klasse IV", "Klasse IV - V", "Klasse IV - V?", "KlasseIV", "Klasse 4"],
+      "input_values": ["wahrscheinlich pathogen", "Klasse IV homozygot", "Klasse IV hom", "Klasse IV heterozygot", "Klasse IV het", "Klasse IV hemizygot", "Klasse IV hemi", "Klasse IV", "Klasse IV - V", "Klasse IV - V?", "KlasseIV", "Klasse 4"],
       "output_value": "Likely pathogenic"
     },
     "class_5_variants": {
-      "input_values": ["Klasse V", "Klasse 5"],
+      "input_values": ["pathogen", "Klasse V homozygot", "Klasse V hom", "Klasse V heterozygot", "Klasse V het", "Klasse V hemizygot", "Klasse V hemi", "Klasse V hom", "Klasse V", "Klasse 5"],
       "output_value": "Pathogenic"
     }
   },
