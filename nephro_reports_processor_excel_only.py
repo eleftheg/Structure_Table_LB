@@ -100,6 +100,29 @@ for col in Uebersicht_Nierenfaelle_selected.columns:
     Uebersicht_Nierenfaelle_selected[col] = Uebersicht_Nierenfaelle_selected[col].replace('nan', np.nan)
 print("✓ Cleaned whitespace from all cells")
 
+# Special handling for Panel/Segregation column
+print("\nHandling Panel/Segregation column...")
+if 'Panel_oder_segregation' in Uebersicht_Nierenfaelle_selected.columns:
+    # Fill empty cells in Panel/Segregation with value from above (forward fill)
+    missing_before = Uebersicht_Nierenfaelle_selected['Panel_oder_segregation'].isna().sum()
+    Uebersicht_Nierenfaelle_selected['Panel_oder_segregation'] = Uebersicht_Nierenfaelle_selected['Panel_oder_segregation'].ffill()
+    missing_after = Uebersicht_Nierenfaelle_selected['Panel_oder_segregation'].isna().sum()
+    
+    print(f"✓ Filled missing Panel/Segregation values: {missing_before - missing_after} values filled")
+    
+    # Filter to keep only lines with "Exom/Nephro"
+    rows_before = len(Uebersicht_Nierenfaelle_selected)
+    Uebersicht_Nierenfaelle_selected = Uebersicht_Nierenfaelle_selected[
+        Uebersicht_Nierenfaelle_selected['Panel_oder_segregation'] == "Exom/Nephro"
+    ]
+    rows_after = len(Uebersicht_Nierenfaelle_selected)
+    
+    print(f"✓ Filtered for 'Exom/Nephro' only: {rows_before - rows_after} rows removed, {rows_after} rows remaining")
+else:
+    print("⚠ Panel/Segregation column not found, skipping panel filtering")
+
+print("✓ Panel/Segregation handling completed")
+
 # Step 1: Fill missing Blutbuch-Nummer with the value from the line above
 print("\nStep 1: Filling missing Blutbuch-Nummer values...")
 if 'Blutbuch_nummer' in Uebersicht_Nierenfaelle_selected.columns:    # Count missing values before filling
@@ -196,11 +219,17 @@ else:
 
 # Remove duplicates to create unique combinations
 print("\nStep 3: Creating unique combinations...")
-# Include AF-Nummer (MEDAT) in the output columns if available
+# Include AF-Nummer (MEDAT) and Panel/Segregation in the output columns if available
 identifier_cols = ['Blutbuch_nummer']
 if 'AF_Nummer_MEDAT' in Uebersicht_Nierenfaelle_filtered.columns:
     identifier_cols.append('AF_Nummer_MEDAT')
     print("✓ Including AF-Nummer (MEDAT) in output")
+
+# Ensure Panel/Segregation is included in the output
+if 'Panel_oder_segregation' in Uebersicht_Nierenfaelle_filtered.columns:
+    if 'Panel_oder_segregation' not in identifier_cols:
+        identifier_cols.append('Panel_oder_segregation')
+    print("✓ Including Panel/Segregation in output")
 
 all_cols = identifier_cols + available_genetic_cols
 long_table = Uebersicht_Nierenfaelle_filtered[all_cols].drop_duplicates().reset_index(drop=True)

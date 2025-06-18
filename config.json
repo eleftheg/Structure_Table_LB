@@ -6,6 +6,7 @@
   },  "column_mapping": {
     "Blutbuch-Nummer": "Blutbuch_nummer",
     "AF-Nummer (MEDAT)": "AF_Nummer_MEDAT",
+    "Panel / Segregation": "Panel_oder_segregation",
     "Gen": "Gen",
     "cDNA": "cDNA",
     "Protein": "Protein",
