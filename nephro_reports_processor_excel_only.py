@@ -205,6 +205,72 @@ if 'Bemerkung' in Uebersicht_Nierenfaelle_selected.columns:
 else:
     print("⚠ Bemerkung column not found, skipping Bemerkung filling")
 
+# Step 1.7: Fill missing variant_explains_phenotype values for identical Blutbuch-Nummer values
+print("\nStep 1.7: Filling missing variant_explains_phenotype values...")
+if 'variant_explains_phenotype' in Uebersicht_Nierenfaelle_selected.columns:
+    # Count missing values before filling
+    missing_before_variant = Uebersicht_Nierenfaelle_selected['variant_explains_phenotype'].isna().sum()
+    
+    # Create a mapping of Blutbuch-Nummer to variant_explains_phenotype for non-null values
+    variant_mapping = Uebersicht_Nierenfaelle_selected.groupby('Blutbuch_nummer')['variant_explains_phenotype'].apply(
+        lambda x: x.dropna().iloc[0] if not x.dropna().empty else np.nan
+    ).to_dict()
+    
+    # Fill missing variant_explains_phenotype values using the mapping
+    mask = Uebersicht_Nierenfaelle_selected['variant_explains_phenotype'].isna()
+    Uebersicht_Nierenfaelle_selected.loc[mask, 'variant_explains_phenotype'] = (
+        Uebersicht_Nierenfaelle_selected.loc[mask, 'Blutbuch_nummer'].map(variant_mapping)
+    )
+    
+    # Count missing values after filling
+    missing_after_variant = Uebersicht_Nierenfaelle_selected['variant_explains_phenotype'].isna().sum()
+    filled_variant = missing_before_variant - missing_after_variant
+    
+    print(f"✓ Filled missing variant_explains_phenotype values: {filled_variant} values filled")
+    print(f"  Total rows: {len(Uebersicht_Nierenfaelle_selected)}, Rows with variant_explains_phenotype: {len(Uebersicht_Nierenfaelle_selected) - missing_after_variant}")
+    
+    # Show some statistics about variant_explains_phenotype coverage per Blutbuch-Nummer
+    variant_coverage = Uebersicht_Nierenfaelle_selected.groupby('Blutbuch_nummer')['variant_explains_phenotype'].apply(
+        lambda x: x.notna().any()
+    ).sum()
+    total_patients = Uebersicht_Nierenfaelle_selected['Blutbuch_nummer'].nunique()
+    print(f"  Blutbuch-Nummer entries with variant_explains_phenotype: {variant_coverage}/{total_patients} ({variant_coverage/total_patients*100:.1f}%)")
+else:
+    print("⚠ variant_explains_phenotype column not found, skipping variant_explains_phenotype filling")
+
+# Step 1.8: Fill missing Befunddatum values for identical Blutbuch-Nummer values
+print("\nStep 1.8: Filling missing Befunddatum values...")
+if 'Befunddatum' in Uebersicht_Nierenfaelle_selected.columns:
+    # Count missing values before filling
+    missing_before_befund = Uebersicht_Nierenfaelle_selected['Befunddatum'].isna().sum()
+    
+    # Create a mapping of Blutbuch-Nummer to Befunddatum for non-null values
+    befund_mapping = Uebersicht_Nierenfaelle_selected.groupby('Blutbuch_nummer')['Befunddatum'].apply(
+        lambda x: x.dropna().iloc[0] if not x.dropna().empty else np.nan
+    ).to_dict()
+    
+    # Fill missing Befunddatum values using the mapping
+    mask = Uebersicht_Nierenfaelle_selected['Befunddatum'].isna()
+    Uebersicht_Nierenfaelle_selected.loc[mask, 'Befunddatum'] = (
+        Uebersicht_Nierenfaelle_selected.loc[mask, 'Blutbuch_nummer'].map(befund_mapping)
+    )
+    
+    # Count missing values after filling
+    missing_after_befund = Uebersicht_Nierenfaelle_selected['Befunddatum'].isna().sum()
+    filled_befund = missing_before_befund - missing_after_befund
+    
+    print(f"✓ Filled missing Befunddatum values: {filled_befund} values filled")
+    print(f"  Total rows: {len(Uebersicht_Nierenfaelle_selected)}, Rows with Befunddatum: {len(Uebersicht_Nierenfaelle_selected) - missing_after_befund}")
+    
+    # Show some statistics about Befunddatum coverage per Blutbuch-Nummer
+    befund_coverage = Uebersicht_Nierenfaelle_selected.groupby('Blutbuch_nummer')['Befunddatum'].apply(
+        lambda x: x.notna().any()
+    ).sum()
+    total_patients = Uebersicht_Nierenfaelle_selected['Blutbuch_nummer'].nunique()
+    print(f"  Blutbuch-Nummer entries with Befunddatum: {befund_coverage}/{total_patients} ({befund_coverage/total_patients*100:.1f}%)")
+else:
+    print("⚠ Befunddatum column not found, skipping Befunddatum filling")
+
 # Step 2: Create long table format
 print("\nStep 2: Creating long table format...")
 
@@ -269,6 +335,18 @@ if 'Bemerkung' in Uebersicht_Nierenfaelle_filtered.columns:
     if 'Bemerkung' not in identifier_cols:
         identifier_cols.append('Bemerkung')
     print("✓ Including Bemerkung in output")
+
+# Ensure variant_explains_phenotype is included in the output
+if 'variant_explains_phenotype' in Uebersicht_Nierenfaelle_filtered.columns:
+    if 'variant_explains_phenotype' not in identifier_cols:
+        identifier_cols.append('variant_explains_phenotype')
+    print("✓ Including variant_explains_phenotype in output")
+
+# Ensure Befunddatum is included in the output
+if 'Befunddatum' in Uebersicht_Nierenfaelle_filtered.columns:
+    if 'Befunddatum' not in identifier_cols:
+        identifier_cols.append('Befunddatum')
+    print("✓ Including Befunddatum in output")
 
 all_cols = identifier_cols + available_genetic_cols
 long_table = Uebersicht_Nierenfaelle_filtered[all_cols].drop_duplicates().reset_index(drop=True)

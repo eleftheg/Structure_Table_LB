@@ -11,7 +11,9 @@
     "cDNA": "cDNA",
     "Protein": "Protein",
     "Klassifizierung": "Klassifizierung",
-    "Bemerkung": "Bemerkung"
+    "Bemerkung": "Bemerkung",
+    "variant_explains_phenotype": "variant_explains_phenotype",
+    "Befunddatum": "Befunddatum"
   },
   "alternative_column_names": {
     "Gen": ["Gen...17", "Gen...16", "Gen...15"],
