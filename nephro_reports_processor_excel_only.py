@@ -455,7 +455,7 @@ print(f"  Patients with multiple combinations: {(blutbuch_counts_recode > 1).sum
 
 # Step 5: Filter by Blutbuch-Nummer from external file
 print("\nStep 5: Filtering by Blutbuch-Nummer from external file...")
-external_file_path = r"c:\Users\g.eleftheriadis\Desktop\AGDE_Nephrology_Samples_2025-05-15.xlsx"
+external_file_path = r"data\AGDE_Nephrology_Samples_2025-06-19.xlsx"
 
 try:
     # Load the external file to get the list of valid Blutbuch-Nummer values
