@@ -98,6 +98,18 @@ for col in Uebersicht_Nierenfaelle_selected.columns:
     Uebersicht_Nierenfaelle_selected[col] = Uebersicht_Nierenfaelle_selected[col].astype(str).str.strip()
     # Convert back 'nan' strings to actual NaN values
     Uebersicht_Nierenfaelle_selected[col] = Uebersicht_Nierenfaelle_selected[col].replace('nan', np.nan)
+
+# Special handling for Befunddatum to format as date only (without time)
+if 'Befunddatum' in Uebersicht_Nierenfaelle_selected.columns:
+    print("✓ Formatting Befunddatum to date-only format...")
+    # Convert to datetime and then format as date string
+    Uebersicht_Nierenfaelle_selected['Befunddatum'] = pd.to_datetime(
+        Uebersicht_Nierenfaelle_selected['Befunddatum'], errors='coerce'
+    ).dt.strftime('%Y-%m-%d')
+    # Replace 'NaT' strings with actual NaN values
+    Uebersicht_Nierenfaelle_selected['Befunddatum'] = Uebersicht_Nierenfaelle_selected['Befunddatum'].replace('NaT', np.nan)
+    print("✓ Befunddatum formatted to show date only (YYYY-MM-DD)")
+
 print("✓ Cleaned whitespace from all cells")
 
 # Special handling for Panel/Segregation column
