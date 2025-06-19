@@ -1,2 +1,5 @@
 # Exclude results directory containing processed data
 results/
+
+# Exclude the data folder
+data/

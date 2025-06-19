@@ -453,8 +453,62 @@ print(f"  Mean combinations per patient: {blutbuch_counts_recode.mean():.2f}")
 print(f"  Max combinations per patient: {blutbuch_counts_recode.max()}")
 print(f"  Patients with multiple combinations: {(blutbuch_counts_recode > 1).sum()}")
 
-# Step 5: Handle semicolon-separated values by expanding rows
-print("\nStep 5: Expanding rows for semicolon-separated values...")
+# Step 5: Filter by Blutbuch-Nummer from external file
+print("\nStep 5: Filtering by Blutbuch-Nummer from external file...")
+external_file_path = r"c:\Users\g.eleftheriadis\Desktop\AGDE_Nephrology_Samples_2025-05-15.xlsx"
+
+try:
+    # Load the external file to get the list of valid Blutbuch-Nummer values
+    print(f"Loading external file: {external_file_path}")
+    external_df = pd.read_excel(external_file_path, dtype=str)
+    print(f"✓ External file loaded successfully. Shape: {external_df.shape}")
+    print(f"  Columns available: {list(external_df.columns)}")
+    
+    # Find the Blutbuch-Nummer column (try different possible names)
+    blutbuch_col = None
+    possible_names = ['Blutbuch-Nummer', 'Blutbuch_nummer', 'Blutbuch-Nr', 'Blutbuch Nr', 'BlutbuchNummer']
+    
+    for col_name in possible_names:
+        if col_name in external_df.columns:
+            blutbuch_col = col_name
+            break
+    
+    if blutbuch_col is None:
+        print("⚠ Warning: Could not find Blutbuch-Nummer column in external file.")
+        print(f"Available columns: {list(external_df.columns)}")
+        print("Please check the column name. Proceeding without filtering...")
+        long_table_filtered_external = long_table_recode.copy()
+    else:
+        print(f"✓ Found Blutbuch-Nummer column: '{blutbuch_col}'")
+        
+        # Get unique Blutbuch-Nummer values from external file
+        external_blutbuch_set = set(external_df[blutbuch_col].dropna().astype(str).str.strip())
+        print(f"✓ Found {len(external_blutbuch_set)} unique Blutbuch-Nummer values in external file")
+        
+        # Filter the long table to keep only matching Blutbuch-Nummer values
+        rows_before_filter = len(long_table_recode)
+        long_table_filtered_external = long_table_recode[
+            long_table_recode['Blutbuch_nummer'].isin(external_blutbuch_set)
+        ].copy()
+        rows_after_filter = len(long_table_filtered_external)
+        
+        print(f"✓ Filtered long table by external Blutbuch-Nummer list:")
+        print(f"  Rows before filtering: {rows_before_filter}")
+        print(f"  Rows after filtering: {rows_after_filter}")
+        print(f"  Rows removed: {rows_before_filter - rows_after_filter}")
+        print(f"  Unique patients remaining: {long_table_filtered_external['Blutbuch_nummer'].nunique()}")
+
+except FileNotFoundError:
+    print(f"❌ Error: External file not found at {external_file_path}")
+    print("Proceeding without filtering...")
+    long_table_filtered_external = long_table_recode.copy()
+except Exception as e:
+    print(f"❌ Error loading external file: {e}")
+    print("Proceeding without filtering...")
+    long_table_filtered_external = long_table_recode.copy()
+
+# Step 6: Handle semicolon-separated values by expanding rows
+print("\nStep 6: Expanding rows for semicolon-separated values...")
 
 def expand_semicolon_rows(df):
     """
@@ -502,8 +556,8 @@ def expand_semicolon_rows(df):
     return pd.DataFrame(expanded_rows).reset_index(drop=True)
 
 # Apply semicolon expansion
-rows_before_expansion = len(long_table_recode)
-long_table_expanded = expand_semicolon_rows(long_table_recode)
+rows_before_expansion = len(long_table_filtered_external)
+long_table_expanded = expand_semicolon_rows(long_table_filtered_external)
 rows_after_expansion = len(long_table_expanded)
 
 print(f"✓ Expanded semicolon-separated values:")
